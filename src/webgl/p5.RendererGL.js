@@ -15,7 +15,7 @@ var attributes = {
   stencil: true,
   antialias: false,
   premultipliedAlpha: false,
-  preserveDrawingBuffer: false
+  preserveDrawingBuffer: true
 };
 
 /**
@@ -96,6 +96,8 @@ p5.RendererGL.prototype._setDefaultCamera = function(){
 };
 
 p5.RendererGL.prototype._update = function() {
+  var gl = this.GL;
+  gl.clear(gl.DEPTH_BUFFER_BIT);
   this.uMVMatrix = p5.Matrix.identity();
   this.translate(0, 0, -800);
   this.ambientLightCount = 0;
