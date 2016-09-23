@@ -73,6 +73,10 @@ var p5 = function(sketch, node, sync) {
    *   image(img, 25, 25, 50, 50);
    * }
    * </code></div>
+   *
+   * @alt
+   * nothing displayed
+   *
    */
 
   /**
@@ -100,6 +104,10 @@ var p5 = function(sketch, node, sync) {
    *   rect(a++%width, 10, 2, 80);
    * }
    * </code></div>
+   *
+   * @alt
+   * nothing displayed
+   *
    */
 
   /**
@@ -145,6 +153,10 @@ var p5 = function(sketch, node, sync) {
    *   line(0, yPos, width, yPos);
    * }
    * </code></div>
+   *
+   * @alt
+   * nothing displayed
+   *
    */
 
 
@@ -339,10 +351,6 @@ var p5 = function(sketch, node, sync) {
         time_since_last >= target_time_between_frames - epsilon) {
 
       //mandatory update values(matrixs and stack)
-      this.resetMatrix();
-      if(this._renderer.isP3D){
-        this._renderer._update();
-      }
 
       this._setProperty('frameCount', this.frameCount + 1);
       this.redraw();
@@ -389,6 +397,10 @@ var p5 = function(sketch, node, sync) {
    *   remove(); // remove whole sketch on mouse press
    * }
    * </code></div>
+   *
+   * @alt
+   * nothing displayed
+   *
    */
   this.remove = function() {
     if (this._curElement) {
@@ -459,12 +471,19 @@ var p5 = function(sketch, node, sync) {
   // assume "global" mode and make everything global (i.e. on the window)
   if (!sketch) {
     this._isGlobal = true;
+    p5.instance = this;
     // Loop through methods on the prototype and attach them to the window
     for (var p in p5.prototype) {
       if(typeof p5.prototype[p] === 'function') {
         var ev = p.substring(2);
         if (!this._events.hasOwnProperty(ev)) {
-          friendlyBindGlobal(p, p5.prototype[p].bind(this));
+          if (Math.hasOwnProperty(p) && (Math[p] === p5.prototype[p])) {
+            // Multiple p5 methods are just native Math functions. These can be
+            // called without any binding.
+            friendlyBindGlobal(p, p5.prototype[p]);
+          } else {
+            friendlyBindGlobal(p, p5.prototype[p].bind(this));
+          }
         }
       } else {
         friendlyBindGlobal(p, p5.prototype[p]);
@@ -518,6 +537,14 @@ var p5 = function(sketch, node, sync) {
   }
 };
 
+// This is a pointer to our global mode p5 instance, if we're in
+// global mode.
+p5.instance = null;
+
+// Allows for the friendly error system to be turned off when creating a sketch,
+// which can give a significant boost to performance when needed.
+p5.disableFriendlyErrors = false;
+
 // attach constants to p5 prototype
 for (var k in constants) {
   p5.prototype[k] = constants[k];
@@ -568,7 +595,8 @@ p5.prototype._createFriendlyGlobalFunctionBinder = function(options) {
   };
 
   return function(prop, value) {
-    if (typeof(IS_MINIFIED) === 'undefined' &&
+    if (!p5.disableFriendlyErrors &&
+        typeof(IS_MINIFIED) === 'undefined' &&
         typeof(value) === 'function' &&
         !(prop in p5.prototype._preloadMethods)) {
       try {

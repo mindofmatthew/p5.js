@@ -24,6 +24,27 @@ p5.prototype._hasTouchInteracted = false;
  * touches[] array.
  *
  * @property touchX
+ * @method touchX
+ * @example
+ * <div>
+ * <code>
+ * // Touch and move  the finger in horizontally  across the canvas
+ * function setup() {
+ *   createCanvas(100, 100);
+ * }
+ *
+ * function draw() {
+ *   background(51);
+ *   stroke(255, 204, 0);
+ *   strokeWeight(4);
+ *   rect(touchX, 50, 10, 10);
+ * }
+ * </code>
+ * </div>
+ *
+ * @alt
+ * 10x10 white rect with thick gold outline moves left and right with touch x.
+ *
  */
 p5.prototype.touchX = 0;
 
@@ -34,6 +55,27 @@ p5.prototype.touchX = 0;
  * touches[] array.
  *
  * @property touchY
+ * @method touchY
+ * @example
+ * <div>
+ * <code>
+ * // Touch and move the finger vertically across the canvas
+ * function setup() {
+ *   createCanvas(100, 100);
+ * }
+ *
+ * function draw() {
+ *   background(51);
+ *   stroke(255, 204, 0);
+ *   strokeWeight(4);
+ *   rect(50, touchY, 10, 10);
+ * }
+ * </code>
+ * </div>
+ *
+ * @alt
+ * 10x10 white rect with thick gold outline moves up and down with touch y.
+ *
  */
 p5.prototype.touchY = 0;
 
@@ -56,6 +98,40 @@ p5.prototype.ptouchX = 0;
 p5.prototype.ptouchY = 0;
 
 /**
+ * The system variable winTouchX always contains the horizontal position of
+ * one finger, relative to (0, 0) of the window.
+ *
+ * @property winTouchX
+ */
+p5.prototype.winTouchX = 0;
+
+/**
+ * The system variable winTouchY always contains the vertical position of
+ * one finger, relative to (0, 0) of the window.
+ *
+ * @property winTouchY
+ */
+p5.prototype.winTouchY = 0;
+
+/**
+ * The system variable pwinTouchX always contains the horizontal position of
+ * one finger, relative to (0, 0) of the window, in the frame previous to the
+ * current frame.
+ *
+ * @property pwinTouchX
+ */
+p5.prototype.pwinTouchX = 0;
+
+/**
+ * The system variable pwinTouchY always contains the vertical position of
+ * one finger, relative to (0, 0) of the window, in the frame previous to the
+ * current frame.
+ *
+ * @property pwinTouchY
+ */
+p5.prototype.pwinTouchY = 0;
+
+/**
  * The system variable touches[] contains an array of the positions of all
  * current touch points, relative to (0, 0) of the canvas, and IDs identifying a
  * unique touch as it moves. Each element in the array is an object with x, y,
@@ -76,16 +152,22 @@ p5.prototype.touchIsDown = false;
 p5.prototype._updateNextTouchCoords = function(e) {
   var x = this.touchX;
   var y = this.touchY;
+  var winX = this.winTouchX;
+  var winY = this.winTouchY;
   if(e.type === 'mousedown' ||
      e.type === 'mousemove' ||
      e.type === 'mouseup' || !e.touches) {
     x = this.mouseX;
     y = this.mouseY;
+    winX = this.winMouseX;
+    winY = this.winMouseY;
   } else {
     if(this._curElement !== null) {
       var touchInfo = getTouchInfo(this._curElement.elt, e, 0);
       x = touchInfo.x;
       y = touchInfo.y;
+      winX = touchInfo.winX;
+      winY = touchInfo.winY;
 
       var touches = [];
       for(var i = 0; i < e.touches.length; i++){
@@ -96,6 +178,8 @@ p5.prototype._updateNextTouchCoords = function(e) {
   }
   this._setProperty('touchX', x);
   this._setProperty('touchY', y);
+  this._setProperty('winTouchX', winX);
+  this._setProperty('winTouchY', winY);
   if (!this._hasTouchInteracted) {
     // For first draw, make previous and next equal
     this._updateTouchCoords();
@@ -106,6 +190,8 @@ p5.prototype._updateNextTouchCoords = function(e) {
 p5.prototype._updateTouchCoords = function() {
   this._setProperty('ptouchX', this.touchX);
   this._setProperty('ptouchY', this.touchY);
+  this._setProperty('pwinTouchX', this.winTouchX);
+  this._setProperty('pwinTouchY', this.winTouchY);
 };
 
 function getTouchInfo(canvas, e, i) {
@@ -115,6 +201,8 @@ function getTouchInfo(canvas, e, i) {
   return {
     x: touch.clientX - rect.left,
     y: touch.clientY - rect.top,
+    winX: touch.clientX,
+    winY: touch.clientY,
     id: touch.identifier
   };
 }
@@ -158,6 +246,10 @@ function getTouchInfo(canvas, e, i) {
  * }
  * </code>
  * </div>
+ *
+ * @alt
+ * 50x50 black rect turns white with touch event.
+ * no image displayed
  */
 p5.prototype._ontouchstart = function(e) {
   var context = this._isGlobal ? window : this;
@@ -217,6 +309,11 @@ p5.prototype._ontouchstart = function(e) {
  * }
  * </code>
  * </div>
+ *
+ * @alt
+ * 50x50 black rect turns lighter with touch until white. resets
+ * no image displayed
+ *
  */
 p5.prototype._ontouchmove = function(e) {
   var context = this._isGlobal ? window : this;
@@ -275,6 +372,11 @@ p5.prototype._ontouchmove = function(e) {
  * }
  * </code>
  * </div>
+ *
+ * @alt
+ * 50x50 black rect turns white with touch.
+ * no image displayed
+ *
  */
 p5.prototype._ontouchend = function(e) {
   this._updateNextTouchCoords(e);
