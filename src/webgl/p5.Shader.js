@@ -16,6 +16,9 @@ p5.Shader = function(fragSource, vertSource){
   this.vertSource = vertSource;
 };
 
+/**
+ * set
+ */
 p5.Shader.prototype.set = function() {
   var args = new Array(arguments.length);
   for (var i = 0; i < args.length; ++i) {
@@ -60,6 +63,102 @@ p5.Shader.prototype.set = function() {
     uObj[uName].location = [];
   } else {
     uObj[uName].data = uData;
+  }
+};
+
+/**
+ * [_compileShader description]
+ * @return {[type]}         [description]
+ */
+p5.Shader.prototype._compile = function(gl) {
+  //Figure out any flags that need to be appended to the shader
+  // var flagPrefix = '';
+  // for(var flag in this.shaderDefines) {
+  //   if(this.shaderDefines[flag]) {
+  //     flagPrefix += '#define ' + flag + '\n';
+  //   }
+  // }
+  // 
+  // var shaders = [flagPrefix + vertSource, flagPrefix + fragSource];
+  // var mId = shaders.toString();
+  var shaders = [this.vertSource, this.fragSource];
+
+  //TODO: cache the shaderProgram in the p5.Shader instance
+  //if(!this.materialInHash(mId)) {
+    var shaderTypes = [gl.VERTEX_SHADER, gl.FRAGMENT_SHADER];
+    var shaderProgram = gl.createProgram();
+
+    for(var i = 0; i < 2; ++i) {
+      var newShader = gl.createShader(shaderTypes[i]);
+      gl.shaderSource(newShader, shaders[i]);
+      gl.compileShader(newShader);
+      if (!gl.getShaderParameter(newShader, gl.COMPILE_STATUS)) {
+        console.log('Yikes! An error occurred compiling the shaders:' +
+          gl.getShaderInfoLog(newShader));
+        return null;
+      }
+      gl.attachShader(shaderProgram, newShader);
+    }
+
+    gl.linkProgram(shaderProgram);
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      console.log('Snap! Error linking shader program');
+    }
+
+    //this.mHash[mId] = shaderProgram;
+  //}
+
+  //this.curShaderId = mId;
+  //return this.mHash[this.curShaderId];
+  
+  gl.useProgram(shaderProgram);
+  
+  //TODO: update texCount
+  this._applyUniforms(gl, shaderProgram, p5.Shader._uniforms);
+  this._applyUniforms(gl, shaderProgram, this._uniforms);
+  
+  return shaderProgram;
+};
+
+/**
+ * Apply saved uniforms to specified shader.
+ */
+p5.Shader.prototype._applyUniforms = function(gl, shaderProgram, uniformsObj) {
+  for(var uName in uniformsObj) {
+    //TODO: This caching might break if one shader is used w/ multiple instances
+    // if(!(this.curShaderId in uniformsObj[uName].location)) {
+    //   uniformsObj[uName].location[this.curShaderId] =
+    //       gl.getUniformLocation(shaderProgram, uName);
+    // }
+    // var location = uniformsObj[uName].location[this.curShaderId];
+    
+    var location = gl.getUniformLocation(shaderProgram, uName);
+    var data;
+
+    var type = uniformsObj[uName].type;
+    var functionName = 'uniform' + type;
+    if(type === 'texture') {
+      this._applyTexUniform(uniformsObj[uName].data, this.texCount);
+      gl.uniform1i(location, this.texCount);
+      this.texCount++;
+    } else if(type.substring(0, 6) === 'Matrix') {
+      if(type === 'Matrix3fv') {
+        data = uniformsObj[uName].data.mat3;
+      } else {
+        data = uniformsObj[uName].data.mat4;
+      }
+      gl[functionName](location, false, data);
+    } else {
+      data = uniformsObj[uName].data;
+
+      if(data instanceof p5.Vector) {
+        data = data.array();
+      } else if(data instanceof p5.Color) {
+        data = data._array;
+      }
+
+      gl[functionName](location, data);
+    }
   }
 };
 

@@ -49,7 +49,6 @@ p5.RendererGL = function(elt, pInst, isMainCanvas) {
 
   //Geometry & Material hashes
   this.gHash = {};
-  this.mHash = {};
 
   //Optional shader flags that will be passed in as #define commands
   this.shaderDefines = {};
@@ -137,108 +136,6 @@ p5.RendererGL.prototype.background = function() {
 // };
 
 //////////////////////////////////////////////
-// SHADER
-//////////////////////////////////////////////
-/**
- * [_compileShader description]
- * @param  {string} vertId  [description]
- * @param  {string} fragId  [description]
- * @param  {array}  [flags] Array of strings
- * @return {[type]}         [description]
- */
-p5.RendererGL.prototype._compileShader = function(shader) {
-  var gl = this.GL;
-  var vertSource = shader.vertSource;
-  var fragSource = shader.fragSource;
-
-  //Figure out any flags that need to be appended to the shader
-  var flagPrefix = '';
-  for(var flag in this.shaderDefines) {
-    if(this.shaderDefines[flag]) {
-      flagPrefix += '#define ' + flag + '\n';
-    }
-  }
-
-  var shaders = [flagPrefix + vertSource, flagPrefix + fragSource];
-  var mId = shaders.toString();
-
-  if(!this.materialInHash(mId)) {
-    var shaderTypes = [gl.VERTEX_SHADER, gl.FRAGMENT_SHADER];
-    var shaderProgram = gl.createProgram();
-
-    for(var i = 0; i < 2; ++i) {
-      var newShader = gl.createShader(shaderTypes[i]);
-      gl.shaderSource(newShader, flagPrefix + shaders[i]);
-      gl.compileShader(newShader);
-      if (!gl.getShaderParameter(newShader, gl.COMPILE_STATUS)) {
-        console.log('Yikes! An error occurred compiling the shaders:' +
-          gl.getShaderInfoLog(newShader));
-        return null;
-      }
-      gl.attachShader(shaderProgram, newShader);
-    }
-
-    gl.linkProgram(shaderProgram);
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      console.log('Snap! Error linking shader program');
-    }
-
-    this.mHash[mId] = shaderProgram;
-  }
-
-  this.curShaderId = mId;
-  return this.mHash[this.curShaderId];
-};
-
-//////////////////////////////////////////////
-// UNIFORMS
-//////////////////////////////////////////////
-/**
- * Apply saved uniforms to specified shader.
- */
-p5.RendererGL.prototype._applyUniforms = function(uniformsObj)
-{
-  var gl = this.GL;
-  var shaderProgram = this.mHash[this.curShaderId];
-  var uObj = uniformsObj || p5.Shader._uniforms;
-
-  for(var uName in uObj) {
-    //TODO: This caching might break if one shader is used w/ multiple instances
-    if(!(this.curShaderId in uObj[uName].location)) {
-      uObj[uName].location[this.curShaderId] =
-          gl.getUniformLocation(shaderProgram, uName);
-    }
-    var location = uObj[uName].location[this.curShaderId];
-    var data;
-
-    var type = uObj[uName].type;
-    var functionName = 'uniform' + type;
-    if(type === 'texture') {
-      this._applyTexUniform(uObj[uName].data, this.texCount);
-      gl.uniform1i(location, this.texCount);
-      this.texCount++;
-    } else if(type.substring(0, 6) === 'Matrix') {
-      if(type === 'Matrix3fv') {
-        data = uObj[uName].data.mat3;
-      } else {
-        data = uObj[uName].data.mat4;
-      }
-      gl[functionName](location, false, data);
-    } else {
-      data = uObj[uName].data;
-
-      if(data instanceof p5.Vector) {
-        data = data.array();
-      } else if(data instanceof p5.Color) {
-        data = data._array;
-      }
-
-      gl[functionName](location, data);
-    }
-  }
-};
-
-//////////////////////////////////////////////
 // COLOR
 //////////////////////////////////////////////
 /**
@@ -320,10 +217,6 @@ p5.RendererGL.prototype.strokeWeight = function(pointSize) {
 
 p5.RendererGL.prototype.geometryInHash = function(gId){
   return this.gHash[gId] !== undefined;
-};
-
-p5.RendererGL.prototype.materialInHash = function(mId){
-  return this.mHash[mId] !== undefined;
 };
 
 /**

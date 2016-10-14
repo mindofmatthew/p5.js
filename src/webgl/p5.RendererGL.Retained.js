@@ -85,14 +85,13 @@ p5.RendererGL.prototype.createBuffers = function(gId, obj) {
 p5.RendererGL.prototype.drawBuffers = function(gId) {
   this._setDefaultCamera();
   var gl = this.GL;
-  var shaderProgram, shaderKey;
+  var shaderProgram;
   if(this.currentShader.vertSource === undefined ||
      this.currentShader.fragSource === undefined) {
     // The shader isn't loaded, so don't render anything this pass
     return;
   } else {
-    shaderProgram = this._compileShader(this.currentShader);
-    shaderKey = this.curShaderId;
+    shaderProgram = this.currentShader._compile(gl);
   }
   gl.useProgram(shaderProgram);
 
@@ -108,12 +107,6 @@ p5.RendererGL.prototype.drawBuffers = function(gId) {
       }
     }
   }
-
-  //TODO: This re-binds the textures each render call, which could be more
-  //efficient
-  this.texCount = 0;
-  this._applyUniforms();
-  this._applyUniforms(this.currentShader._uniforms);
 
   gl.drawElements(
     gl.TRIANGLES, this.gHash[gId].numberOfItems,
